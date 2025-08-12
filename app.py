@@ -23,10 +23,6 @@ SNOWFLAKE_WAREHOUSE = st.secrets["snowflake"]["WAREHOUSE"]
 SNOWFLAKE_DATABASE = "DEMAND_FORECASTING_DB"
 SNOWFLAKE_SCHEMA = "INVENTORY_OPT_SCHEMA"
 TABLE_NAME = "DEMAND_INVENTORY"
-# USER = "DATATEAM"
-# PASSWORD = "Miracle@#$5648"
-# ACCOUNT = "HUQCHBA-QA55890"
-# WAREHOUSE = "COMPUTE_WH"
 
 # ==============================
 # FUNCTION: Load data from Snowflake with filters
@@ -162,4 +158,5 @@ st.metric(label="Recommended Reorder Point (units)", value=f"{int(reorder_point)
 # ==============================
 with st.expander("View Raw Data from Snowflake"):
     st.dataframe(data)
+
 
