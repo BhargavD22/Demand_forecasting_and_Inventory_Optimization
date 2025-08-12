@@ -1,0 +1,11 @@
+week_start,product_id,product_name,units_sold,inventory_on_hand,lead_time_days,season,promotions,unit_price
+2023-03-13,P001,Gear Shaft,142,858,7,Spring,0,15.03
+2023-03-13,P002,Bearing Set,163,837,14,Spring,0,19.81
+2023-03-13,P003,Drive Belt,142,858,14,Spring,0,9.88
+2023-03-13,P004,Hydraulic Pump,147,853,7,Spring,0,25.58
+2023-03-13,P005,Valve Assembly,135,865,21,Spring,0,18.6
+2023-03-20,P001,Gear Shaft,462,396,7,Spring,0,15.34
+2023-03-20,P002,Bearing Set,478,359,14,Spring,0,20.62
+2023-03-20,P003,Drive Belt,420,438,21,Spring,0,9.71
+2023-03-20,P004,Hydraulic Pump,455,398,14,Spring,0,24.75
+2023-03-20,P005,Valve Assembly,472,393,14,Spring,0,17.14
