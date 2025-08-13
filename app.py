@@ -1,3 +1,4 @@
+
 # app.py
 import streamlit as st
 import pandas as pd
@@ -7,11 +8,17 @@ from prophet.plot import plot_plotly
 import plotly.express as px
 import numpy as np
 from datetime import date
+import warnings
 
 # ==============================
 # PAGE CONFIG
 # ==============================
 st.set_page_config(page_title="Demand Forecast & Inventory Optimization", layout="wide")
+
+# ==============================
+# WARNINGS
+# ==============================
+warnings.filterwarnings("ignore")
 
 # ==============================
 # SNOWFLAKE CONNECTION SETTINGS (use Streamlit secrets)
@@ -25,11 +32,21 @@ SNOWFLAKE_SCHEMA = "INVENTORY_OPT_SCHEMA"
 TABLE_NAME = "DEMAND_INVENTORY"
 
 # ==============================
+# PRODUCT MAPPING
+# ==============================
+product_map = {
+    "P001": "Gear Shaft",
+    "P002": "Bearing Set",
+    "P003": "Drive Belt",
+    "P004": "Hydraulic Pump",
+    "P005": "Valve Assembly"
+}
+
+# ==============================
 # FUNCTION: Load data from Snowflake with filters
 # ==============================
 @st.cache_data(ttl=600)
 def load_data(product_id, start_date, end_date, season):
-    # Connect
     conn = snowflake.connector.connect(
         user=SNOWFLAKE_USER,
         password=SNOWFLAKE_PASSWORD,
@@ -39,13 +56,11 @@ def load_data(product_id, start_date, end_date, season):
         schema=SNOWFLAKE_SCHEMA
     )
 
-    # Build WHERE clause
     where_clauses = [f"product_id = '{product_id}'"]
     where_clauses.append(f"week_start >= '{start_date}'")
     where_clauses.append(f"week_start <= '{end_date}'")
     if season != "All":
         where_clauses.append(f"season = '{season}'")
-
     where_sql = " AND ".join(where_clauses)
 
     query = f"""
@@ -63,7 +78,6 @@ def load_data(product_id, start_date, end_date, season):
         WHERE {where_sql}
         ORDER BY week_start;
     """
-
     df = pd.read_sql(query, conn)
     conn.close()
     return df
@@ -73,24 +87,22 @@ def load_data(product_id, start_date, end_date, season):
 # ==============================
 st.sidebar.header("Filters")
 
-product_choice = st.sidebar.selectbox(
+product_display = st.sidebar.selectbox(
     "Select Product",
-    ["P001", "P002", "P003", "P004", "P005"]
+    options=list(product_map.values())
 )
+product_choice = [k for k, v in product_map.items() if v == product_display][0]
 
-# Date filter
 default_start = date(2023, 1, 1)
 default_end = date.today()
 start_date = st.sidebar.date_input("Start Date", default_start)
 end_date = st.sidebar.date_input("End Date", default_end)
 
-# Season filter
 season_choice = st.sidebar.selectbox(
     "Select Season",
-    ["All", "Winter", "Spring", "Summer", "Autumn"]
+    ["All", "Winter", "Spring", "Summer", "Fall"]
 )
 
-# Forecast horizon
 forecast_weeks = st.sidebar.slider("Weeks to Forecast", min_value=4, max_value=24, value=8)
 
 # ==============================
@@ -128,8 +140,13 @@ with col2:
 # DEMAND FORECASTING
 # ==============================
 st.subheader("Forecasted Demand")
+
 df_prophet = data.rename(columns={"week_start": "ds", "units_sold": "y"})
 df_prophet["ds"] = pd.to_datetime(df_prophet["ds"])
+
+if len(df_prophet) < 4:
+    st.warning("Not enough historical data for forecasting.")
+    st.stop()
 
 model = Prophet()
 model.fit(df_prophet)
@@ -143,12 +160,13 @@ st.plotly_chart(plot_plotly(model, forecast), use_container_width=True)
 # INVENTORY REORDER POINT
 # ==============================
 st.subheader("Reorder Point Recommendation")
-lead_time = int(data['lead_time_days'].iloc[0])
+lead_time = int(data["lead_time_days"].iloc[0])
 weeks_lead = max(1, lead_time // 7)
+
 forecast_tail = forecast.tail(weeks_lead)
-forecast_mean = forecast_tail['yhat'].mean()
-forecast_std = forecast_tail['yhat'].std()
-z_score = 1.65  # ~95% service level
+forecast_mean = forecast_tail["yhat"].mean()
+forecast_std = forecast_tail["yhat"].std()
+z_score = 1.65  # 95% service level
 
 reorder_point = forecast_mean * weeks_lead + z_score * forecast_std * np.sqrt(weeks_lead)
 st.metric(label="Recommended Reorder Point (units)", value=f"{int(reorder_point):,}")
@@ -158,5 +176,3 @@ st.metric(label="Recommended Reorder Point (units)", value=f"{int(reorder_point)
 # ==============================
 with st.expander("View Raw Data from Snowflake"):
     st.dataframe(data)
-
-
