@@ -115,7 +115,7 @@ if data.empty:
     st.stop()
 
 st.title("📊 Demand Forecast & Inventory Optimization")
-st.caption(f"Data Source: {SNOWFLAKE_DATABASE}.{SNOWFLAKE_SCHEMA}.{TABLE_NAME}")
+#st.caption(f"Data Source: {SNOWFLAKE_DATABASE}.{SNOWFLAKE_SCHEMA}.{TABLE_NAME}")
 st.write(f"### Product: {data['product_name'].iloc[0]} ({product_choice}) — Filtered View")
 
 # ==============================
@@ -185,4 +185,5 @@ st.metric(label="Recommended Reorder Point (units)", value=f"{int(reorder_point)
 # ==============================
 with st.expander("View Raw Data from Snowflake"):
     st.dataframe(data)
+
 
