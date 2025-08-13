@@ -166,9 +166,18 @@ weeks_lead = max(1, lead_time // 7)
 forecast_tail = forecast.tail(weeks_lead)
 forecast_mean = forecast_tail["yhat"].mean()
 forecast_std = forecast_tail["yhat"].std()
+
+# ✅ Handle the case where std is NaN (e.g., when weeks_lead is 1)
+if np.isnan(forecast_std):
+    forecast_std = 0
+
 z_score = 1.65  # 95% service level
 
 reorder_point = forecast_mean * weeks_lead + z_score * forecast_std * np.sqrt(weeks_lead)
+
+# ✅ Ensure reorder_point is not negative before displaying
+reorder_point = max(0, reorder_point) 
+
 st.metric(label="Recommended Reorder Point (units)", value=f"{int(reorder_point):,}")
 
 # ==============================
@@ -176,3 +185,4 @@ st.metric(label="Recommended Reorder Point (units)", value=f"{int(reorder_point)
 # ==============================
 with st.expander("View Raw Data from Snowflake"):
     st.dataframe(data)
+
