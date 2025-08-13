@@ -1,4 +1,3 @@
-
 # app.py
 import streamlit as st
 import pandas as pd
@@ -80,6 +79,7 @@ def load_data(product_id, start_date, end_date, season):
     """
     df = pd.read_sql(query, conn)
     conn.close()
+    df.columns = [col.lower() for col in df.columns]  # ✅ Normalize columns
     return df
 
 # ==============================
