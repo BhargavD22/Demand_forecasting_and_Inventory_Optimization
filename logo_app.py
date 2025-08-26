@@ -108,4 +108,3 @@ with col5:
 # ALERT MESSAGE
 if df["critical_breach"].any():
     st.warning("⚠️ Critical inventory threshold breached in the selected period!")
-
