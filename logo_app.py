@@ -5,6 +5,7 @@ import snowflake.connector
 from prophet import Prophet
 from prophet.plot import plot_plotly
 import plotly.express as px
+import plotly.graph_objects as go
 import numpy as np
 from datetime import date
 import warnings
@@ -152,21 +153,28 @@ if data.empty:
 st.write(f"### Product: {data['product_name'].iloc[0]} ({product_choice}) — Filtered View")
 
 # ==============================
-# HISTORICAL CHARTS
+# CRITICAL THRESHOLD SLIDER
+# ==============================
+default_threshold = int(data["inventory_on_hand"].mean() * 0.25)
+user_threshold = st.slider("Set Critical Inventory Threshold", min_value=0, max_value=500, value=default_threshold)
+
+# ==============================
+# HISTORICAL CHARTS (Interactive)
 # ==============================
 col1, col2 = st.columns(2)
 with col1:
     st.subheader("Weekly Units Sold")
-    st.plotly_chart(
-        px.line(data, x="week_start", y="units_sold", title="Historical Demand"),
-        use_container_width=True
-    )
+    units_fig = go.Figure()
+    units_fig.add_trace(go.Scatter(x=data["week_start"], y=data["units_sold"], mode='lines+markers', name='Units Sold'))
+    units_fig.update_layout(title="Historical Demand", xaxis_title="Week", yaxis_title="Units Sold")
+    st.plotly_chart(units_fig, use_container_width=True)
 
 with col2:
     st.subheader("Inventory On Hand")
-    threshold = 100
-    inventory_fig = px.line(data, x="week_start", y="inventory_on_hand", title="Inventory Levels")
-    inventory_fig.add_hline(y=threshold, line_dash="dash", line_color="red", annotation_text="Critical Level")
+    inventory_fig = go.Figure()
+    inventory_fig.add_trace(go.Scatter(x=data["week_start"], y=data["inventory_on_hand"], mode='lines+markers', name='Inventory'))
+    inventory_fig.add_hline(y=user_threshold, line_dash="dash", line_color="red", annotation_text="Critical Level")
+    inventory_fig.update_layout(title="Inventory Levels", xaxis_title="Week", yaxis_title="Inventory")
     st.plotly_chart(inventory_fig, use_container_width=True)
 
 # ==============================
