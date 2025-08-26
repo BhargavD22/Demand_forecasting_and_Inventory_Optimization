@@ -6,7 +6,7 @@ from datetime import datetime
 # Load data
 @st.cache_data
 def load_data():
-    df = pd.read_csv("sample_supply_chain_data.csv", parse_dates=["date"])
+    df = pd.read_csv("tailored_demand_inventory.csv", parse_dates=["date"])
     return df
 
 # Theming: Apply background based on theme
@@ -112,3 +112,4 @@ inventory_fig.update_layout(
     hovermode='x unified'
 )
 st.plotly_chart(inventory_fig, use_container_width=True)
+
