@@ -1,93 +1,110 @@
 # app.py
 import streamlit as st
 import pandas as pd
-import plotly.graph_objects as go
 import numpy as np
-from datetime import datetime, timedelta
+import plotly.graph_objs as go
+from datetime import datetime
 
+# PAGE CONFIG
+st.set_page_config(page_title="Demand Forecast & Inventory Optimization", layout="wide")
 
-# ============ PAGE CONFIG ============
-st.set_page_config(page_title="Demand & Inventory Dashboard", layout="wide", page_icon="📦")
+# THEME TOGGLE
+theme = st.sidebar.radio("Theme Mode", options=["Light", "Dark"], index=1, help="Switch between dark/light themes")
 
-
-# ============ CUSTOM CSS ============
-st.markdown("""
-<style>
-/* Gradient background */
-body {
-background: linear-gradient(135deg, #f0f4f8 0%, #d9e2ec 100%) !important;
-}
-
-
-/* Watermark */
-body::after {
-content: "Miracle Inc.";
-position: fixed;
-bottom: 10px;
-right: 20px;
-font-size: 14px;
-color: rgba(180, 180, 180, 0.4);
-z-index: 9999;
-}
-
-
-/* Sidebar glow */
-section[data-testid="stSidebar"] {
-box-shadow: 0 0 10px rgba(0, 123, 255, 0.5);
-}
-</style>
-""", unsafe_allow_html=True)
-
-
-# ============ SAMPLE DATA ============
-dates = pd.date_range(start="2024-01-01", periods=180)
-demand = np.random.poisson(lam=200, size=len(dates))
-inventory = np.clip(1000 - np.cumsum(np.random.randint(100, 200, size=len(dates))) + np.random.randint(50, 150, size=len(dates)), 0, None)
-data = pd.DataFrame({"Date": dates, "Demand": demand, "Inventory": inventory})
-
-
-# ============ SIDEBAR ============
+# SIDEBAR: Filters
 with st.sidebar:
-st.image("miracle-logo-dark.png", use_column_width=True)
-st.markdown("---")
-st.title("🛠 Controls")
-theme = st.radio("Theme Mode", ["Light", "Dark"], help="Switch between app themes")
-threshold = st.slider("Critical Inventory Threshold", min_value=0, max_value=1000, value=300, step=10, help="Below this value, inventory is critical")
-with st.expander("ℹ️ Info"):
-st.markdown("This dashboard tracks demand & inventory with critical level detection, KPI summaries, and forecast insights.")
+    st.markdown("### Filters")
+    product = st.selectbox("Select Product", ["Gear Shaft", "Clutch Plate", "Piston Rod"], help="Choose product to visualize")
+    start_date = st.date_input("Start Date", datetime(2023, 1, 1))
+    end_date = st.date_input("End Date", datetime.today())
+    season = st.selectbox("Select Season", ["All", "Summer", "Winter", "Monsoon"], help="Optional season filter")
+    critical_threshold = st.slider("Critical Inventory Level", min_value=100, max_value=500, value=300)
 
+# GENERATE SYNTHETIC DATA
+np.random.seed(42)
+dates = pd.date_range(start=start_date, end=end_date, freq='W')
+df = pd.DataFrame({
+    "date": dates,
+    "units_sold": np.random.poisson(350, len(dates)),
+    "inventory_on_hand": np.random.randint(200, 800, len(dates))
+})
+df["critical_breach"] = df["inventory_on_hand"] < critical_threshold
 
-# ============ KPI CARDS ============
-total_demand = int(data["Demand"].sum())
-avg_inventory = int(data["Inventory"].mean())
-critical_breaches = int((data["Inventory"] < threshold).sum())
+# KPI CARDS
+col1, col2, col3 = st.columns(3)
+with col1:
+    st.metric("📦 Total Demand", f"{df['units_sold'].sum()}")
+with col2:
+    st.metric("📊 Avg Inventory", f"{int(df['inventory_on_hand'].mean())}")
+with col3:
+    pct_critical = 100 * df['critical_breach'].mean()
+    st.metric("🚨 % Critical Breaches", f"{pct_critical:.2f}%")
 
+# TITLE
+st.markdown(f"## Product: {product} — Filtered View")
+st.markdown("### Weekly Units Sold")
 
-kpi1, kpi2, kpi3 = st.columns(3)
-kpi1.metric("📦 Total Demand", f"{total_demand}")
-kpi2.metric("📉 Avg Inventory", f"{avg_inventory}")
-kpi3.metric("⚠️ Critical Breaches", f"{critical_breaches}")
+# ANIMATED DEMAND GRAPH
+fig1 = go.Figure()
 
+for i in range(len(df)):
+    fig1.add_trace(go.Scatter(x=df['date'][:i+1], y=df['units_sold'][:i+1],
+                              mode='lines+markers',
+                              line=dict(color='royalblue'),
+                              name="Units Sold",
+                              showlegend=False))
 
-# ============ CONDITIONAL FORMATTING COLORS ============
-def get_inventory_color(val):
-return "red" if val < threshold else "green"
+fig1.update_layout(
+    updatemenus=[dict(
+        type="buttons",
+        buttons=[dict(label="Play", method="animate", args=[None])],
+        showactive=False,
+        x=1.05,
+        y=1.2
+    )],
+    xaxis_title="Date",
+    yaxis_title="Units Sold",
+    template="plotly_dark" if theme == "Dark" else "plotly_white",
+    height=400,
+    margin=dict(t=10, r=10, l=10, b=10)
+)
 
+frames = [go.Frame(data=[go.Scatter(x=df['date'][:k+1], y=df['units_sold'][:k+1])]) for k in range(len(df))]
+fig1.frames = frames
 
-colors = data["Inventory"].apply(get_inventory_color)
+# INVENTORY LEVELS WITH ALERT LINE
+fig2 = go.Figure()
+fig2.add_trace(go.Scatter(
+    x=df["date"],
+    y=df["inventory_on_hand"],
+    mode="lines+markers",
+    name="Inventory",
+    line=dict(color="mediumseagreen")
+))
+fig2.add_trace(go.Scatter(
+    x=df["date"],
+    y=[critical_threshold]*len(df),
+    mode="lines",
+    name="Critical Level",
+    line=dict(color="red", dash="dash")
+))
 
+fig2.update_layout(
+    title="Inventory On Hand",
+    xaxis_title="Date",
+    yaxis_title="Inventory",
+    template="plotly_dark" if theme == "Dark" else "plotly_white",
+    height=400,
+    margin=dict(t=10, r=10, l=10, b=10)
+)
 
-# ============ HISTORICAL DEMAND (ANIMATED) ============
-frames = []
-for i in range(10, len(data), 5):
-frames.append(go.Frame(data=[go.Scatter(x=data["Date"][:i], y=data["Demand"][:i], mode="lines+markers")]))
+# MAIN DASHBOARD
+col4, col5 = st.columns(2)
+with col4:
+    st.plotly_chart(fig1, use_container_width=True)
+with col5:
+    st.plotly_chart(fig2, use_container_width=True)
 
-
-fig_demand = go.Figure(
-data=[go.Scatter(x=data["Date"][:10], y=data["Demand"][:10], mode="lines+markers")],
-layout=go.Layout(
-title="Historical Demand (Animated)",
-xaxis=dict(rangeslider=dict(visible=True)),
-yaxis_title="Units",
-updatemenus=[dict(
-st.plotly_chart(fig_inventory, use_container_width=True)
+# ALERT MESSAGE
+if df["critical_breach"].any():
+    st.warning("⚠️ Critical inventory threshold breached in the selected period!")
