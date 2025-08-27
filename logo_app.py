@@ -7,9 +7,6 @@ from datetime import datetime
 # PAGE CONFIG
 st.set_page_config(page_title="Demand Forecast & Inventory Optimization", layout="wide")
 
-# THEME TOGGLE
-theme = st.sidebar.radio("Theme Mode", options=["Light", "Dark"], index=1, help="Switch between dark/light themes")
-
 # LOAD THE DATASET
 @st.cache_data
 def load_data():
@@ -54,54 +51,67 @@ if df_filtered.empty:
     st.warning("No data available for the selected filters.")
 else:
     df_filtered["critical_breach"] = df_filtered["inventory_on_hand"] < critical_threshold
+
+    # Inject custom CSS for KPI cards
+    st.markdown("""
+        <style>
+            .kpi-card {
+                background-color: #f0f2f6; /* A subtle grey for contrast */
+                border-radius: 10px;
+                padding: 20px;
+                text-align: center;
+                box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.1), 0 6px 20px 0 rgba(0, 0, 0, 0.1);
+                transition: transform 0.3s ease-in-out;
+            }
+            .kpi-card:hover {
+                transform: translateY(-5px); /* Creates the "levitating" effect */
+            }
+            .kpi-value {
+                font-size: 2.5em;
+                font-weight: bold;
+                color: #007bff; /* Highlight color */
+                margin-top: 10px;
+            }
+            .kpi-label {
+                font-size: 1.1em;
+                color: #555;
+            }
+        </style>
+    """, unsafe_allow_html=True)
     
-    # KPI CARDS - Updated with new metrics
+    # KPI CARDS - Now using custom HTML for styling
     col1, col2, col3, col4, col5 = st.columns(5)
     with col1:
-        st.metric("📦 Total Demand", f"{df_filtered['units_sold'].sum()}")
+        st.markdown(f'<div class="kpi-card"><div class="kpi-label">📦 Total Demand</div><div class="kpi-value">{df_filtered["units_sold"].sum()}</div></div>', unsafe_allow_html=True)
     with col2:
-        st.metric("📊 Avg Inventory", f"{int(df_filtered['inventory_on_hand'].mean())}")
+        st.markdown(f'<div class="kpi-card"><div class="kpi-label">📊 Avg Inventory</div><div class="kpi-value">{int(df_filtered["inventory_on_hand"].mean())}</div></div>', unsafe_allow_html=True)
     with col3:
         pct_critical = 100 * df_filtered['critical_breach'].mean()
-        st.metric("🚨 % Critical Breaches", f"{pct_critical:.2f}%")
+        st.markdown(f'<div class="kpi-card"><div class="kpi-label">🚨 % Critical Breaches</div><div class="kpi-value">{pct_critical:.2f}%</div></div>', unsafe_allow_html=True)
     with col4:
         total_revenue = (df_filtered['units_sold'] * df_filtered['unit_price']).sum()
-        st.metric("💰 Total Revenue", f"${total_revenue:,.2f}")
+        st.markdown(f'<div class="kpi-card"><div class="kpi-label">💰 Total Revenue</div><div class="kpi-value">${total_revenue:,.2f}</div></div>', unsafe_allow_html=True)
     with col5:
         avg_lead_time = df_filtered['lead_time_days'].mean()
-        st.metric("⏳ Avg Lead Time", f"{avg_lead_time:.1f} days")
+        st.markdown(f'<div class="kpi-card"><div class="kpi-label">⏳ Avg Lead Time</div><div class="kpi-value">{avg_lead_time:.1f} days</div></div>', unsafe_allow_html=True)
 
     # TITLE
     st.markdown(f"## Product: {product} — Filtered View")
     st.markdown("### Weekly Units Sold")
 
-    # ANIMATED DEMAND GRAPH
+    # DEMAND GRAPH - Now a static line chart
     fig1 = go.Figure()
-
-    for i in range(len(df_filtered)):
-        fig1.add_trace(go.Scatter(x=df_filtered['week_start'][:i+1], y=df_filtered['units_sold'][:i+1],
-                                    mode='lines+markers',
-                                    line=dict(color='royalblue'),
-                                    name="Units Sold",
-                                    showlegend=False))
-
+    fig1.add_trace(go.Scatter(x=df_filtered['week_start'], y=df_filtered['units_sold'],
+                                mode='lines+markers',
+                                line=dict(color='royalblue'),
+                                name="Units Sold"))
     fig1.update_layout(
-        updatemenus=[dict(
-            type="buttons",
-            buttons=[dict(label="Play", method="animate", args=[None])],
-            showactive=False,
-            x=1.05,
-            y=1.2
-        )],
         xaxis_title="Date",
         yaxis_title="Units Sold",
-        template="plotly_dark" if theme == "Dark" else "plotly_white",
+        template="plotly_white",
         height=400,
         margin=dict(t=10, r=10, l=10, b=10)
     )
-
-    frames = [go.Frame(data=[go.Scatter(x=df_filtered['week_start'][:k+1], y=df_filtered['units_sold'][:k+1])]) for k in range(len(df_filtered))]
-    fig1.frames = frames
 
     # INVENTORY LEVELS WITH ALERT LINE
     fig2 = go.Figure()
@@ -124,7 +134,7 @@ else:
         title="Inventory On Hand",
         xaxis_title="Date",
         yaxis_title="Inventory",
-        template="plotly_dark" if theme == "Dark" else "plotly_white",
+        template="plotly_white",
         height=400,
         margin=dict(t=10, r=10, l=10, b=10)
     )
