@@ -19,10 +19,13 @@ df_full = load_data()
 
 # SIDEBAR: Filters
 with st.sidebar:
+    # Display the logo at the top of the sidebar
     st.image("miracle-logo-dark.png", width=150)
     
-    st.markdown("### Filters")
-    
+    st.markdown("---")
+
+    st.subheader("Dashboard Settings")
+    # Product and Season Selection
     products = sorted(df_full['product_name'].unique().tolist())
     product = st.selectbox("Select Product", products, help="Choose product to visualize")
     
@@ -30,11 +33,21 @@ with st.sidebar:
     season_options = ['All'] + seasons
     season = st.selectbox("Select Season", season_options, help="Optional season filter")
     
+    st.markdown("---")
+
+    st.subheader("Date & Forecast Window")
+    # Date Range Filter
     start_date = st.date_input("Start Date", df_full['week_start'].min())
     end_date = st.date_input("End Date", df_full['week_start'].max())
-    critical_threshold = st.slider("Critical Inventory Level", min_value=100, max_value=500, value=300)
     
+    # Moving Average Window
     ma_window = st.slider("Moving Average Window (weeks)", min_value=1, max_value=12, value=4)
+
+    st.markdown("---")
+
+    st.subheader("Inventory Controls")
+    # Critical Inventory Level
+    critical_threshold = st.slider("Critical Inventory Level", min_value=100, max_value=500, value=300)
 
 # APPLY FILTERS TO THE DATA
 df_filtered = df_full[
@@ -56,10 +69,14 @@ else:
     # 2. CALCULATE INVENTORY PREDICTION
     df_filtered['Predicted_Inventory'] = df_filtered['inventory_on_hand'] - df_filtered['Predicted_Units_Sold']
     
+    # 3. CALCULATE ERROR METRICS
     df_metrics = df_filtered.dropna(subset=['Predicted_Units_Sold'])
     
     if not df_metrics.empty:
+        # Mean Absolute Error (MAE)
         mae = np.mean(np.abs(df_metrics['units_sold'] - df_metrics['Predicted_Units_Sold']))
+        
+        # Mean Absolute Percentage Error (MAPE)
         mape = np.mean(np.abs(df_metrics['units_sold'] - df_metrics['Predicted_Units_Sold']) / df_metrics['units_sold']) * 100
     else:
         mae = 0
@@ -67,6 +84,7 @@ else:
         
     df_filtered["critical_breach"] = df_filtered["inventory_on_hand"] < critical_threshold
 
+    # Inject custom CSS for KPI cards
     st.markdown("""
         <style>
             .kpi-card {
@@ -93,6 +111,7 @@ else:
         </style>
     """, unsafe_allow_html=True)
     
+    # KPI CARDS - Updated with new metrics
     col1, col2, col3, col4, col5, col6, col7 = st.columns(7)
     with col1:
         st.markdown(f'<div class="kpi-card"><div class="kpi-label">📦 Total Demand</div><div class="kpi-value">{df_filtered["units_sold"].sum()}</div></div>', unsafe_allow_html=True)
