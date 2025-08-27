@@ -21,6 +21,9 @@ df_full = load_data()
 
 # SIDEBAR: Filters
 with st.sidebar:
+    # Display the logo at the top of the sidebar
+    st.image("miracle-logo-dark.png", width=150)
+    
     st.markdown("### Filters")
     
     # Get unique products and seasons for the filters
@@ -52,8 +55,8 @@ if df_filtered.empty:
 else:
     df_filtered["critical_breach"] = df_filtered["inventory_on_hand"] < critical_threshold
     
-    # KPI CARDS
-    col1, col2, col3 = st.columns(3)
+    # KPI CARDS - Updated with new metrics
+    col1, col2, col3, col4, col5 = st.columns(5)
     with col1:
         st.metric("📦 Total Demand", f"{df_filtered['units_sold'].sum()}")
     with col2:
@@ -61,6 +64,12 @@ else:
     with col3:
         pct_critical = 100 * df_filtered['critical_breach'].mean()
         st.metric("🚨 % Critical Breaches", f"{pct_critical:.2f}%")
+    with col4:
+        total_revenue = (df_filtered['units_sold'] * df_filtered['unit_price']).sum()
+        st.metric("💰 Total Revenue", f"${total_revenue:,.2f}")
+    with col5:
+        avg_lead_time = df_filtered['lead_time_days'].mean()
+        st.metric("⏳ Avg Lead Time", f"{avg_lead_time:.1f} days")
 
     # TITLE
     st.markdown(f"## Product: {product} — Filtered View")
